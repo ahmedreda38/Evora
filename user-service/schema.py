@@ -18,7 +18,6 @@ class UserLogin(BaseModel):
     username: str = Field(..., min_length=3, max_length=100, example="John Doe")
     password: str = Field(..., min_length=8, example="SecurePassword123")
 
-
 class UserResponse(UserBase):
     model_config = ConfigDict(from_attributes=True) # this tell pydantic to read data from the ORM model attributes instead of expecting a dict
     
@@ -27,4 +26,11 @@ class UserResponse(UserBase):
     email: str
     role: str
     is_active: bool 
-    date_joined: datetime 
+    date_joined: datetime
+
+class UserData(UserBase):
+    is_active: bool
+
+class TokenResponse(BaseModel):
+    token: str
+    data: UserData

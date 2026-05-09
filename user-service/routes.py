@@ -3,18 +3,10 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import User
 import crud
-from schema import UserCreate, UserResponse, UserLogin
+from schema import UserCreate, UserResponse, UserLogin, TokenResponse,UserData
 import auth
 
 router = APIRouter()
-
-
-@router.get("/{user_id}", response_model=UserResponse)
-def read_user(user_id: int, db: Session = Depends(get_db)):
-    db_user = crud.get_user_by_id(db, user_id)
-    if db_user is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    return db_user 
 
 
 
@@ -27,18 +19,39 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     
     return new_user
 
-@router.post("/login",response_model=UserResponse)
+@router.post("/login",response_model=TokenResponse)
 def login_user(user: UserLogin, db : Session = Depends(get_db)):
     username = user.username
     password = user.password
     trying_user = crud.get_user_by_username(username=username,db=db)
     if not trying_user:
         raise HTTPException(status_code=403, detail="Login failed, Account not found.")
-    # hashed_password = crud.hash_password(password=password)
-    # print("Computed hash:" + user.password + "-" * 10 + hashed_password )
-    # print(f"Target hash: {trying_user.password_hash}")
     pass_check = auth.verify_password(password,trying_user.password_hash)
     if not pass_check:
         raise HTTPException(status_code=403, detail="Login failed, Wrong password.")
 
-    return trying_user
+    data = {
+        "username":trying_user.username,
+        "email": trying_user.email,
+        "role":trying_user.role,
+        "is_active":trying_user.is_active
+    }
+
+    token = auth.sign_token(data=data)
+    return {"token":token,"data":data}
+
+
+@router.get("/me",response_model=UserData)
+def get_current_user(token: str):
+    payload = auth.verify_token(token=token)
+    if payload:
+        return payload
+    raise HTTPException(status_code=403,detail="Unauthorized to do this action")
+
+
+@router.get("/{user_id}", response_model=UserResponse)
+def read_user(user_id: int, db: Session = Depends(get_db)):
+    db_user = crud.get_user_by_id(db, user_id)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return db_user 
