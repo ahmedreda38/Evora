@@ -1,1 +1,4 @@
 id_rsa.pub
+envy/*
+./.vscode/*
+.vscode/
