@@ -10,5 +10,50 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql
+
+  user-service:
+    build: ./user-service
+    container_name: evora-user-service
+    environment:
+      DATABASE_URL: postgresql+psycopg2://db_admin:evora123@postgres-db:5432/evoradb
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres-db
+
+  event-service:
+    build: ./event-service
+    container_name: evora-event-service
+    environment:
+      DATABASE_URL: postgresql+psycopg2://db_admin:evora123@postgres-db:5432/evoradb
+    ports:
+      - "8001:8000"
+    depends_on:
+      - postgres-db
+
+  event-registration-service:
+    build: ./event-registration-service
+    container_name: evora-event-registration-service
+    environment:
+      DATABASE_URL: postgresql+psycopg2://db_admin:evora123@postgres-db:5432/evoradb
+    ports:
+      - "8002:8000"
+    depends_on:
+      - postgres-db
+      - event-service
+      - user-service
+
+  notification-service:
+    build: ./notifications-emailing-service
+    container_name: evora-notification-service
+    environment:
+      DATABASE_URL: postgresql+psycopg2://db_admin:evora123@postgres-db:5432/evoradb
+    ports:
+      - "8003:8000"
+    depends_on:
+      - postgres-db
+  
+
+
 volumes:
   pgdata:
