@@ -91,24 +91,24 @@ Content-Type: application/json
 ---
 
 ### 2. Login User
-Authenticates user and returns JWT token.
+Authenticates user and returns JWT token (OAuth2 compatible).
 
 **Request:**
 ```http
 POST /users/login
-Content-Type: application/json
+Content-Type: application/x-www-form-urlencoded
 
-{
-  "username": "john_doe",
-  "password": "SecurePassword123"
-}
+username=john_doe&password=SecurePassword123
 ```
 
 **Response (200):**
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImpvaG5fZG9lIiwiZW1haWwiOiJqb2huQGV4YW1wbGUuY29tIiwicm9sZSI6InVzZXIiLCJpc19hY3RpdmUiOnRydWUsImV4cCI6MTcyODQ0Nzc3M30.kU7xvZNk5oqw...",
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImpvaG5fZG9lIiwiZW1haWwiOiJqb2huQGV4YW1wbGUuY29tIiwicm9sZSI6InVzZXIiLCJpc19hY3RpdmUiOnRydWUsImV4cCI6MTcyODQ0Nzc3M30.kU7xvZNk5oqw...",
+  "token_type": "bearer",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "data": {
+    "id": 1,
     "username": "john_doe",
     "email": "john@example.com",
     "role": "user",
@@ -183,10 +183,39 @@ Authorization: Bearer <jwt_token>
 }
 ```
 
+**Error (401):**
+```json
+{
+  "detail": "Could not validate credentials"
+}
+```
+
+---
+
+### 5. Get Admin Data (Example Role-Based Route)
+Retrieves admin-specific data. Requires `admin` role.
+
+**Request:**
+```http
+GET /users/admin
+Authorization: Bearer <jwt_token>
+```
+
+**Response (200):**
+```json
+{
+  "id": 1,
+  "username": "admin_user",
+  "email": "admin@example.com",
+  "role": "admin",
+  "is_active": true
+}
+```
+
 **Error (403):**
 ```json
 {
-  "detail": "Unauthorized to do this action"
+  "detail": "Operation not permitted"
 }
 ```
 
@@ -268,11 +297,8 @@ curl -X POST "http://localhost:8000/users/register" \
 **Login:**
 ```bash
 curl -X POST "http://localhost:8000/users/login" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "testuser",
-    "password": "TestPass123"
-  }'
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "username=testuser&password=TestPass123"
 ```
 
 **Get Current User** (save token from login response):
@@ -392,6 +418,8 @@ user-service/
 - `verify_password()` - Verify password against hash
 - `sign_token()` - Generate JWT token
 - `verify_token()` - Validate and decode JWT
+- `get_current_user()` - FastAPI Dependency to extract and verify the JWT token
+- `RoleChecker()` - FastAPI Dependency for role-based authorization
 
 ---
 
@@ -405,7 +433,7 @@ user-service/
 - For local dev, use `localhost` instead of `postgres-db`
 
 ### Issue: Token verification fails
-**Error:** `"Unauthorized to do this action"`
+**Error:** `"Could not validate credentials"`
 **Solution:**
 - Verify token is included in Authorization header
 - Check token format: `Bearer <token>`

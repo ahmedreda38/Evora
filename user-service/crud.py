@@ -2,7 +2,7 @@ from auth import hash_password, verify_password
 from  models import User
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
-from schema import UserCreate
+from schema import UserCreate, UserUpdate
 
 
 
@@ -32,3 +32,24 @@ def create_user(db: Session, user: UserCreate):
     db.commit()
     db.refresh(new_user)
     return new_user
+
+def update_user(db: Session, user_id: int, user_data: UserUpdate):
+    user_to_update = get_user_by_id(db,user_id)
+    if not user_to_update:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if user_data.username and get_user_by_username(db,user_data.username):
+        raise HTTPException(status_code=400, detail="Username already taken")
+    if user_data.email and get_user_by_email(db,user_data.email):
+        raise HTTPException(status_code=400, detail="Email already taken")
+    
+    if user_data.username:
+        user_to_update.username = user_data.username
+    if user_data.email:
+        user_to_update.email = user_data.email
+    if user_data.password:
+        user_to_update.password_hash = hash_password(user_data.password)
+    
+    db.commit()
+    db.refresh(user_to_update)
+    return user_to_update
