@@ -9,7 +9,6 @@ from schema import UserCreate, UserUpdate
 def get_user_by_id(db: Session , user_id: int):
     return db.query(User).filter(User.id == user_id).first()
 
-
 def get_user_by_username(db: Session, username: str):
     return db.query(User).filter(User.username == username).first()
 
@@ -53,3 +52,29 @@ def update_user(db: Session, user_id: int, user_data: UserUpdate):
     db.commit()
     db.refresh(user_to_update)
     return user_to_update
+
+def get_all_users(db: Session):
+    return db.query(User).all()
+
+def get_users_by_role(db: Session , role: str):
+    return db.query(User).filter(User.role == role).all()
+
+def delete_user(db: Session, user_id: int):
+    user_to_delete = get_user_by_id(db, user_id)
+    if not user_to_delete:
+        raise HTTPException(status_code=404, detail="User not found")
+    db.delete(user_to_delete)
+    db.commit()
+    return {"message": "User deleted successfully"}
+
+def update_role(db: Session, user_id:int , new_role: str):
+    user_to_update = get_user_by_id(db,user_id)
+    if not user_to_update:
+        raise HTTPException(status_code=404, detail="User not found")
+    if new_role not in ["admin","user","organizer","volenteer","sponsor"]
+        raise HTTPException(status_code=400, detail="Invalid role")
+    user_to_update.role = new_role
+    db.commit()
+    db.refresh(user_to_update)
+    return user_to_update
+
