@@ -36,7 +36,8 @@ def login_user(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db : 
         "username": trying_user.username,
         "email": trying_user.email,
         "role": trying_user.role,
-        "is_active": trying_user.is_active
+        "is_active": trying_user.is_active,
+        "date_joined":str(trying_user.date_joined)
     }
 
     token = auth.sign_token(data=data)
@@ -49,8 +50,6 @@ def login_user(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db : 
     }
 
 
-
-
 @router.get("/me", response_model=UserData)
 def get_current_user_info(current_user: User = Depends(auth.get_current_user)):
     return current_user
@@ -58,7 +57,6 @@ def get_current_user_info(current_user: User = Depends(auth.get_current_user)):
 @router.put("/me", response_model=UserData)
 def update_current_user(user_data: UserUpdate, current_user: User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
     updated_user = crud.update_user(db=db, user_id=current_user.id, user_data=user_data)
-
     return updated_user
 
 @router.get("/get/{user_id}", response_model=UserResponse)
@@ -72,4 +70,7 @@ def read_user(user_id: int, db: Session = Depends(get_db)):
 def get_admin_data(current_user: User = Depends(auth.RoleChecker(["admin"]))):
     return current_user
 
+@router.get("/Ay7aga")
+def ayhaga(request: Request):
+    return request.headers
 

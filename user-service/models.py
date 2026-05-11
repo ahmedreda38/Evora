@@ -12,3 +12,10 @@ class User(Base):
     role: str = Column(String(50), nullable=False, default="user")
     is_active: bool = Column(Boolean, default=True)
     date_joined: datetime = Column(DateTime, default=lambda: datetime.now(UTC))
+    updated_at : datetime = Column(
+        DateTime,
+        nullable=False,
+        index=True,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC)
+    )
