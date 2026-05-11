@@ -71,7 +71,7 @@ def update_role(db: Session, user_id:int , new_role: str):
     user_to_update = get_user_by_id(db,user_id)
     if not user_to_update:
         raise HTTPException(status_code=404, detail="User not found")
-    if new_role not in ["admin","user","organizer","volenteer","sponsor"]
+    if new_role not in ["admin","user","organizer","volenteer","sponsor"]:
         raise HTTPException(status_code=400, detail="Invalid role")
     user_to_update.role = new_role
     db.commit()
