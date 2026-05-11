@@ -1,0 +1,75 @@
+services:
+  postgres-db:
+    image: postgres:18
+    container_name: evora-db-prod
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-db_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-evoradb}
+    # No exposed ports to the host machine for security
+    volumes:
+      - pgdata-prod:/var/lib/postgresql
+    networks:
+      - evora-net-prod
+    restart: always
+
+  user-service:
+    build: ./user-service
+    container_name: evora-user-service-prod
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-db_admin}:${POSTGRES_PASSWORD}@postgres-db:5432/${POSTGRES_DB:-evoradb}
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres-db
+    networks:
+      - evora-net-prod
+    # No volume mounts for source code in production
+    restart: always
+
+  event-service:
+    build: ./event-service
+    container_name: evora-event-service-prod
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-db_admin}:${POSTGRES_PASSWORD}@postgres-db:5432/${POSTGRES_DB:-evoradb}
+    ports:
+      - "8001:8000"
+    depends_on:
+      - postgres-db
+    networks:
+      - evora-net-prod
+    restart: always
+
+  event-registration-service:
+    build: ./event-registration-service
+    container_name: evora-event-registration-service-prod
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-db_admin}:${POSTGRES_PASSWORD}@postgres-db:5432/${POSTGRES_DB:-evoradb}
+    ports:
+      - "8002:8000"
+    depends_on:
+      - postgres-db
+      - event-service
+      - user-service
+    networks:
+      - evora-net-prod
+    restart: always
+
+  notification-service:
+    build: ./notifications-emailing-service
+    container_name: evora-notification-service-prod
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-db_admin}:${POSTGRES_PASSWORD}@postgres-db:5432/${POSTGRES_DB:-evoradb}
+    ports:
+      - "8003:8000"
+    depends_on:
+      - postgres-db
+    networks:
+      - evora-net-prod
+    restart: always
+
+volumes:
+  pgdata-prod:
+
+networks:
+  evora-net-prod:

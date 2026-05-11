@@ -357,7 +357,7 @@ docker compose up -d postgres-db
 
 # Initialize database (first time only)
 cd user-service
-python create_tables.py
+alembic upgrade head
 cd ..
 
 # Start service with hot-reload

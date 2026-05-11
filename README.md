@@ -10,7 +10,9 @@ Evora is a microservices-based event management platform built with **FastAPI**,
 
 ```
 cloud-project/
-├── docker-compose.yml          # Orchestration for all services and database
+├── docker-compose.dev.yml      # Orchestration for local development
+├── docker-compose.test.yml     # Orchestration for running automated tests
+├── docker-compose.prod.yml     # Orchestration for production deployment
 ├── envy/                        # Python virtual environment
 ├── user-service/               # User management microservice (Complete)
 │   ├── README.md              # Service-specific documentation
@@ -67,10 +69,10 @@ SECRET_KEY=your_super_secret_key_here_change_in_production
 EOF
 
 # Start services
-docker compose up -d postgres-db user-service
+docker compose -f docker-compose.dev.yml up -d postgres-db user-service
 
 # View logs
-docker compose logs -f user-service
+docker compose -f docker-compose.dev.yml logs -f user-service
 
 # Access API documentation
 # Open: http://localhost:8000/docs
@@ -148,37 +150,44 @@ pip install -r event-service/requirements.txt
 
 ## Running Services
 
-### All Services with Docker Compose
+### Docker Compose Environments
+
+This project uses three separate Docker Compose files:
+1. **Development (`docker-compose.dev.yml`)**: Includes volume mounts for hot-reloading code without rebuilding images. Database ports are exposed.
+2. **Testing (`docker-compose.test.yml`)**: Uses an isolated database (`evoradb_test`) and overrides commands to run test suites.
+3. **Production (`docker-compose.prod.yml`)**: Optimized for deployment. No volume mounts, no exposed database ports, and includes `restart: always`.
+
+### All Services with Docker Compose (Development)
 ```bash
 # Start all services
-docker compose up -d
+docker compose -f docker-compose.dev.yml up -d
 
 # Stop all services
-docker compose down
+docker compose -f docker-compose.dev.yml down
 
 # View logs for specific service
-docker compose logs -f user-service
+docker compose -f docker-compose.dev.yml logs -f user-service
 
 # Rebuild services
-docker compose build --no-cache
+docker compose -f docker-compose.dev.yml build --no-cache
 ```
 
 ### Individual Services with Docker Compose
 ```bash
 # Start only specific services
-docker compose up -d postgres-db user-service
+docker compose -f docker-compose.dev.yml up -d postgres-db user-service
 
 # Stop specific service
-docker compose stop user-service
+docker compose -f docker-compose.dev.yml stop user-service
 
 # Restart service
-docker compose restart user-service
+docker compose -f docker-compose.dev.yml restart user-service
 ```
 
 ### Local Development Mode
 ```bash
 # Start database only
-docker compose up -d postgres-db
+docker compose -f docker-compose.dev.yml up -d postgres-db
 
 # From service directory, run with hot-reload
 cd user-service
@@ -223,12 +232,12 @@ service-name/
 
 ```bash
 # Docker Compose Commands
-docker compose up -d                    # Start all services in background
-docker compose down                     # Stop all services
-docker compose logs -f [service]        # View service logs
-docker compose exec [service] bash      # Execute bash in service
-docker compose build --no-cache         # Rebuild all images
-docker compose down -v                  # Stop and remove volumes
+docker compose -f docker-compose.dev.yml up -d                    # Start all services in background
+docker compose -f docker-compose.dev.yml down                     # Stop all services
+docker compose -f docker-compose.dev.yml logs -f [service]        # View service logs
+docker compose -f docker-compose.dev.yml exec [service] bash      # Execute bash in service
+docker compose -f docker-compose.dev.yml build --no-cache         # Rebuild all images
+docker compose -f docker-compose.dev.yml down -v                  # Stop and remove volumes
 
 # Database Access
 docker exec -it evora-db psql -U db_admin -d evoradb
@@ -260,12 +269,12 @@ docker network ls
 docker network inspect evora-net
 
 # Recreate network
-docker compose down -v
-docker compose up -d
+docker compose -f docker-compose.dev.yml down -v
+docker compose -f docker-compose.dev.yml up -d
 ```
 
 ### Database Connection Issues
-- Ensure PostgreSQL container is running: `docker compose ps`
+# Ensure PostgreSQL container is running: `docker compose -f docker-compose.dev.yml ps`
 - Check DATABASE_URL in .env file
 - Verify credentials match docker-compose.yml
 
@@ -338,7 +347,7 @@ Refer to individual service README files for service-specific environment variab
 For issues or questions:
 1. Check the relevant service README
 2. Review common troubleshooting section
-3. Check Docker logs: `docker compose logs -f [service]`
+3. Check Docker logs: `docker compose -f docker-compose.dev.yml logs -f [service]`
 4. Contact the team lead
 
 **Last Updated**: May 9, 2026

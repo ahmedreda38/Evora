@@ -24,7 +24,6 @@ services:
       - postgres-db
     networks:
       - evora-net
-    # for easy development so the container gets updated when the code changes
     volumes:
       - ./user-service:/app
 
@@ -39,6 +38,8 @@ services:
       - postgres-db
     networks:
       - evora-net
+    volumes:
+      - ./event-service:/app
 
   event-registration-service:
     build: ./event-registration-service
@@ -53,6 +54,8 @@ services:
       - user-service
     networks:
       - evora-net
+    volumes:
+      - ./event-registration-service:/app
 
   notification-service:
     build: ./notifications-emailing-service
@@ -65,6 +68,8 @@ services:
       - postgres-db
     networks:
       - evora-net
+    volumes:
+      - ./notifications-emailing-service:/app
 
 volumes:
   pgdata:
