@@ -15,7 +15,7 @@ services:
     depends_on:
       - user-service
       - event-service
-      # - event-registration-service
+      - event-registration-service
       # - notification-service
 
   postgres-db:
