@@ -2,3 +2,5 @@
 ./__pycache__
 ./__pycache__/*
 __pycache__/*
+alembic/versions/__pycache__/
+*.pyc

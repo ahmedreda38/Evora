@@ -47,6 +47,24 @@ CREATE TABLE users (
 
 ---
 
+## Database Migrations (Alembic)
+
+This project uses **Alembic** to manage database schema changes.
+
+Whenever you add, remove, or modify a column in `models.py`, you need to generate and apply a migration:
+
+1. **Generate the migration script** (this inspects `models.py` and creates a new file in `alembic/versions/`):
+```bash
+docker exec -w /app evora-user-service alembic revision --autogenerate -m "describe your changes here"
+```
+
+2. **Apply the migration** to the database:
+```bash
+docker exec -w /app evora-user-service alembic upgrade head
+```
+
+---
+
 ## API Endpoints
 
 ### 1. Register User
