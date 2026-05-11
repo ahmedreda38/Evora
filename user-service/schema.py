@@ -5,21 +5,21 @@ from pydantic import EmailStr
 
  
 class UserBase(BaseModel):
-    username: str = Field(..., min_length=3, max_length=100, example="Obad Zobad")
-    email: EmailStr = Field(..., min_length=6, max_length=200, example="obad@obad.com")
+    username: str = Field(..., min_length=3, max_length=100, examples=["Obad Zobad"])
+    email: EmailStr = Field(..., min_length=6, max_length=200, examples=["obad@obad.com"])
     
 
 
 class UserCreate(UserBase):
-    password: str = Field(..., min_length=8, example="Password123")
+    password: str = Field(..., min_length=8, examples=["Password123"])
 
 class UserUpdate(UserBase):
-    password: Optional[str] = Field(None, min_length=8, example="Password123")
+    password: Optional[str] = Field(None, min_length=8, examples=["Password123"])
  
 
 class UserLogin(BaseModel):
-    username: str = Field(..., min_length=3, max_length=100, example="Obad Zobad")
-    password: str = Field(..., min_length=8, example="Password123")
+    username: str = Field(..., min_length=3, max_length=100, examples=["Obad Zobad"])
+    password: str = Field(..., min_length=8, examples=["Password123"])
 
 
 class UserResponse(UserBase):
@@ -37,5 +37,7 @@ class UserData(UserBase):
     updated_at: datetime
 
 class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str
     token: str
     data: UserData

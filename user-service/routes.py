@@ -37,7 +37,8 @@ def login_user(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db : 
         "email": trying_user.email,
         "role": trying_user.role,
         "is_active": trying_user.is_active,
-        "date_joined":str(trying_user.date_joined)
+        "date_joined": str(trying_user.date_joined),
+        "updated_at": str(trying_user.updated_at)
     }
 
     token = auth.sign_token(data=data)
