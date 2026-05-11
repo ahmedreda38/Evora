@@ -15,7 +15,12 @@ class Event(Base):
     date_end : datetime = Column(DateTime, nullable=False, index=True)
     capacity : int = Column(Integer, nullable=False, index=True)
     organizer_id : int = Column(Integer, nullable=False, index=True)
-    created_at : datetime = Column(DateTime, nullable=False, index=True, default=lambda: datetime.now(UTC))
+    created_at : datetime = Column(
+        DateTime, 
+        nullable=False, 
+        index=True, 
+        default=lambda: datetime.now(UTC)
+    )
     updated_at : datetime = Column(
         DateTime,
         nullable=False,

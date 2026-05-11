@@ -11,6 +11,12 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
+    restart: on-failure
+    depends_on:
+      - user-service
+      - event-service
+      # - event-registration-service
+      # - notification-service
 
   postgres-db:
     image: postgres:18
@@ -71,7 +77,7 @@ services:
       - ./event-registration-service:/app
 
   notification-service:
-    build: ./notifications-emailing-service
+    build: ./notifictions-emailing-service
     container_name: evora-notification-service
     environment:
       DATABASE_URL: postgresql+psycopg2://db_admin:evora123@postgres-db:5432/evoradb
@@ -89,3 +95,4 @@ volumes:
 
 networks:
   evora-net:
+    driver: bridge
