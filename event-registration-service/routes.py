@@ -13,7 +13,8 @@ EVENT_SERVICE_URL = "http://event-service:8000"
 def register_for_event(
     registration: schema.RegistrationCreate, 
     db: Session = Depends(get_db),
-    current_user: auth.CurrentUser = Depends(auth.get_current_user)
+    current_user: auth.CurrentUser = Depends(auth.get_current_user),
+    token: str = Depends(auth.oauth2_scheme)
 ):
     """Register for an event. Verifies event existence and capacity via Event Service."""
     
@@ -41,7 +42,26 @@ def register_for_event(
         
     # 3. Create the registration
     try:
-        return crud.create_registration(db=db, user_id=current_user.id, event_id=registration.event_id)
+        new_registration = crud.create_registration(db=db, user_id=current_user.id, event_id=registration.event_id)
+        
+        # 4. Dispatch Notification
+        NOTIFICATION_SERVICE_URL = "http://notification-service:8000"
+        try:
+            httpx.post(
+                f"{NOTIFICATION_SERVICE_URL}/send",
+                headers={"Authorization": f"Bearer {token}"},
+                json={
+                    "user_id": current_user.id,
+                    "recipient_email": current_user.email,
+                    "subject": "Evora Booking Confirmation",
+                    "message": f"You are confirmed for {event_data.get('name')}! It starts at {event_data.get('start_date')}."
+                },
+                timeout=3.0
+            )
+        except Exception as e:
+            print(f"Warning: Failed to dispatch notification email: {e}")
+            
+        return new_registration
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=400, detail="You are already registered for this event")

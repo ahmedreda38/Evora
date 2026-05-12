@@ -2,7 +2,34 @@
 
 ## Project Overview
 
-Evora is a microservices-based event management platform built with **FastAPI**, **PostgreSQL**, and **Docker**. The system handles user management, event management, event registrations, and notifications through independent, scalable microservices.
+Evora is a microservices-based event management platform built with **FastAPI**, **PostgreSQL**, and **Docker**. The system handles user management, event management, event registrations, and notifications through independent, scalable microservices routed through an **Nginx API Gateway**.
+
+### Architecture Overview
+
+```mermaid
+graph TD
+    Client([Client / Browser]) -->|HTTP/HTTPS| Nginx[Nginx API Gateway]
+    
+    subgraph Microservices Layer
+        Nginx -->|/users| UserSvc[User Service]
+        Nginx -->|/events| EventSvc[Event Service]
+        Nginx -->|/register| RegSvc[Registration Service]
+        Nginx -->|/notifications| NotifSvc[Notification Service]
+    end
+    
+    subgraph Database Layer
+        UserSvc -.->|SQL| DB[(PostgreSQL evoradb)]
+        EventSvc -.->|SQL| DB
+        RegSvc -.->|SQL| DB
+        NotifSvc -.->|SQL| DB
+    end
+    
+    RegSvc -->|Verify Capacity| EventSvc
+    RegSvc -->|Trigger Email| NotifSvc
+    UserSvc -.->|JWT Auth| EventSvc
+    UserSvc -.->|JWT Auth| RegSvc
+    UserSvc -.->|JWT Auth| NotifSvc
+```
 
 ---
 
@@ -15,21 +42,11 @@ cloud-project/
 ├── docker-compose.prod.yml     # Orchestration for production deployment
 ├── envy/                        # Python virtual environment
 ├── user-service/               # User management microservice (Complete)
-│   ├── README.md              # Service-specific documentation
-│   ├── main.py
-│   ├── models.py
-│   ├── database.py
-│   ├── routes.py
-│   ├── schema.py
-│   ├── crud.py
-│   ├── auth.py
-│   ├── requirements.txt
-│   ├── Dockerfile
-│   └── create_tables.py
-├── event-service/              # Event management microservice (Coming Soon)
-├── event-registration-service/ # Event registration handling (Coming Soon)
-├── notifications-emailing-service/ # Notifications service (Coming Soon)
-└── api-gateway/               # API Gateway (Coming Soon)
+├── event-service/              # Event management microservice (Complete)
+├── event-registration-service/ # Event registration handling (Complete)
+├── notification-service/       # Notifications service (Complete)
+├── nginx/                      # Nginx API Gateway (Complete)
+└── docs/                       # Software Architecture Documentation
 ```
 
 ---
@@ -201,9 +218,9 @@ python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
 Each microservice has its own README with service-specific details:
 
 - **[User Service](./user-service/README.md)** - User management, authentication, JWT
-- **[Event Service](./event-service/README.md)** - Event CRUD operations (coming soon)
-- **[Event Registration Service](./event-registration-service/README.md)** - Registration management (coming soon)
-- **[Notifications Service](./notifications-emailing-service/README.md)** - Email notifications (coming soon)
+- **[Event Service](./event-service/README.md)** - Event CRUD operations, Capacity
+- **[Event Registration Service](./event-registration-service/README.md)** - Registration management, Booking
+- **[Notifications Service](./notification-service/README.md)** - Email and System notifications
 
 ---
 
@@ -315,9 +332,10 @@ git merge develop
 | Phase | Status | Services |
 |-------|--------|----------|
 | Phase 1 | ✓ Complete | User Service |
-| Phase 2 | In Planning | Event Service, Event Registration |
-| Phase 3 | In Planning | Notifications Service |
-| Phase 4 | In Planning | API Gateway |
+| Phase 2 | ✓ Complete | Event Service |
+| Phase 3 | ✓ Complete | Event Registration Service |
+| Phase 4 | ✓ Complete | Notification Service |
+| Phase 5 | ✓ Complete | Nginx API Gateway |
 
 ---
 
