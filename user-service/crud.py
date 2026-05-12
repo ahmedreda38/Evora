@@ -37,10 +37,14 @@ def update_user(db: Session, user_id: int, user_data: UserUpdate):
     if not user_to_update:
         raise HTTPException(status_code=404, detail="User not found")
     
-    if user_data.username and get_user_by_username(db,user_data.username):
-        raise HTTPException(status_code=400, detail="Username already taken")
-    if user_data.email and get_user_by_email(db,user_data.email):
-        raise HTTPException(status_code=400, detail="Email already taken")
+    if user_data.username:
+        existing = get_user_by_username(db, user_data.username)
+        if existing and existing.id != user_id:
+            raise HTTPException(status_code=400, detail="Username already taken")
+    if user_data.email:
+        existing = get_user_by_email(db, user_data.email)
+        if existing and existing.id != user_id:
+            raise HTTPException(status_code=400, detail="Email already taken")
     
     if user_data.username:
         user_to_update.username = user_data.username

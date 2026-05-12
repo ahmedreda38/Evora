@@ -1,10 +1,30 @@
 services:
+
+  nginx:
+    image: nginx:latest
+    container_name: evora-nginx-prod
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - evora-net-prod
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    restart: always
+    depends_on:
+      - user-service
+      - event-service
+      - event-registration-service
+      - notification-service
+      - frontend
+
   postgres-db:
     image: postgres:18
     container_name: evora-db-prod
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-db_admin}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-evora123}
       POSTGRES_DB: ${POSTGRES_DB:-evoradb}
     # No exposed ports to the host machine for security
     volumes:
@@ -17,23 +37,21 @@ services:
     build: ./user-service
     container_name: evora-user-service-prod
     environment:
-      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-db_admin}:${POSTGRES_PASSWORD}@postgres-db:5432/${POSTGRES_DB:-evoradb}
-    ports:
-      - "8000:8000"
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-db_admin}:${POSTGRES_PASSWORD:-evora123}@postgres-db:5432/${POSTGRES_DB:-evoradb}
+      SECRET_KEY: ${SECRET_KEY:-change_me_in_production}
     depends_on:
       - postgres-db
     networks:
       - evora-net-prod
-    # No volume mounts for source code in production
+    # No volume mounts or exposed ports in production
     restart: always
 
   event-service:
     build: ./event-service
     container_name: evora-event-service-prod
     environment:
-      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-db_admin}:${POSTGRES_PASSWORD}@postgres-db:5432/${POSTGRES_DB:-evoradb}
-    ports:
-      - "8001:8000"
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-db_admin}:${POSTGRES_PASSWORD:-evora123}@postgres-db:5432/${POSTGRES_DB:-evoradb}
+      SECRET_KEY: ${SECRET_KEY:-change_me_in_production}
     depends_on:
       - postgres-db
     networks:
@@ -44,9 +62,8 @@ services:
     build: ./event-registration-service
     container_name: evora-event-registration-service-prod
     environment:
-      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-db_admin}:${POSTGRES_PASSWORD}@postgres-db:5432/${POSTGRES_DB:-evoradb}
-    ports:
-      - "8002:8000"
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-db_admin}:${POSTGRES_PASSWORD:-evora123}@postgres-db:5432/${POSTGRES_DB:-evoradb}
+      SECRET_KEY: ${SECRET_KEY:-change_me_in_production}
     depends_on:
       - postgres-db
       - event-service
@@ -56,14 +73,22 @@ services:
     restart: always
 
   notification-service:
-    build: ./notifications-emailing-service
+    build: ./notification-service
     container_name: evora-notification-service-prod
     environment:
-      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-db_admin}:${POSTGRES_PASSWORD}@postgres-db:5432/${POSTGRES_DB:-evoradb}
-    ports:
-      - "8003:8000"
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-db_admin}:${POSTGRES_PASSWORD:-evora123}@postgres-db:5432/${POSTGRES_DB:-evoradb}
+      SECRET_KEY: ${SECRET_KEY:-change_me_in_production}
     depends_on:
       - postgres-db
+    networks:
+      - evora-net-prod
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    container_name: evora-frontend-prod
     networks:
       - evora-net-prod
     restart: always

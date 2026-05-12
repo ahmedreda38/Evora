@@ -7,24 +7,59 @@ services:
       POSTGRES_PASSWORD: evora123
       POSTGRES_DB: evoradb_test
     ports:
-      - "5433:5432"  # Different port so it doesn't conflict with dev DB
+      - "5433:5432"
     networks:
       - evora-test-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U db_admin -d evoradb_test"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
 
   user-service-test:
     build: ./user-service
     container_name: evora-user-service-test
     environment:
       DATABASE_URL: postgresql+psycopg2://db_admin:evora123@postgres-test-db:5432/evoradb_test
-    command: ["pytest", "tests/"] # Override to run tests
+      SECRET_KEY: test_secret_key_for_ci
+    command: ["pytest", "tests/", "-v", "--tb=short"]
     depends_on:
-      - postgres-test-db
+      postgres-test-db:
+        condition: service_healthy
     networks:
       - evora-test-net
     volumes:
       - ./user-service:/app
 
-# Add other services here as they get test suites
+  event-service-test:
+    build: ./event-service
+    container_name: evora-event-service-test
+    environment:
+      DATABASE_URL: postgresql+psycopg2://db_admin:evora123@postgres-test-db:5432/evoradb_test
+      SECRET_KEY: test_secret_key_for_ci
+    command: ["pytest", "tests/", "-v", "--tb=short"]
+    depends_on:
+      postgres-test-db:
+        condition: service_healthy
+    networks:
+      - evora-test-net
+    volumes:
+      - ./event-service:/app
+
+  notification-service-test:
+    build: ./notification-service
+    container_name: evora-notification-service-test
+    environment:
+      DATABASE_URL: postgresql+psycopg2://db_admin:evora123@postgres-test-db:5432/evoradb_test
+      SECRET_KEY: test_secret_key_for_ci
+    command: ["pytest", "tests/", "-v", "--tb=short"]
+    depends_on:
+      postgres-test-db:
+        condition: service_healthy
+    networks:
+      - evora-test-net
+    volumes:
+      - ./notification-service:/app
 
 networks:
   evora-test-net:
