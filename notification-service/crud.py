@@ -20,3 +20,14 @@ def get_user_notifications(db: Session, user_id: int, skip: int = 0, limit: int 
 
 def get_notification(db: Session, notification_id: int):
     return db.query(Notification).filter(Notification.id == notification_id).first()
+
+def mark_as_read(db: Session, notification_id: int):
+    notification = get_notification(db, notification_id)
+    if notification:
+        notification.is_read = True
+        db.commit()
+        db.refresh(notification)
+    return notification
+
+def get_unread_count(db: Session, user_id: int):
+    return db.query(Notification).filter(Notification.user_id == user_id, Notification.is_read == False).count()

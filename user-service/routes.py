@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import User
 import crud
-from schema import UserCreate, UserResponse, UserLogin, TokenResponse, UserData, UserUpdate
+from schema import UserCreate, UserResponse, UserLogin, TokenResponse, UserData, UserUpdate, RoleUpdateRequest
 import auth
 from typing import Annotated
 from fastapi.security import OAuth2PasswordRequestForm
@@ -58,6 +58,16 @@ def get_current_user_info(current_user: User = Depends(auth.get_current_user)):
 @router.put("/me", response_model=UserData)
 def update_current_user(user_data: UserUpdate, current_user: User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
     updated_user = crud.update_user(db=db, user_id=current_user.id, user_data=user_data)
+    return updated_user
+
+@router.put("/me/role", response_model=UserData)
+def upgrade_user_role(role_data: RoleUpdateRequest, current_user: User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+    """Self-service role upgrade (currently only supports upgrading to 'organizer')."""
+    if role_data.requested_role != "organizer":
+        raise HTTPException(status_code=400, detail="You can only request to become an organizer")
+    if current_user.role == role_data.requested_role:
+        raise HTTPException(status_code=400, detail=f"You are already an {role_data.requested_role}")
+    updated_user = crud.update_role(db=db, user_id=current_user.id, new_role=role_data.requested_role)
     return updated_user
 
 @router.get("/get/{user_id}", response_model=UserResponse)

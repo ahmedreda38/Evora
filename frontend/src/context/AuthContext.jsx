@@ -69,8 +69,20 @@ export const AuthProvider = ({ children }) => {
     toast.success('Logged out');
   };
 
+  // Refresh user data from the backend (e.g. after role upgrade or profile edit)
+  const updateUser = async () => {
+    try {
+      const res = await axios.get('/users/me');
+      const updatedData = res.data;
+      localStorage.setItem('user', JSON.stringify(updatedData));
+      setUser(updatedData);
+    } catch (err) {
+      console.error('Failed to refresh user data:', err);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, updateUser, loading }}>
       {!loading && children}
     </AuthContext.Provider>
   );

@@ -15,6 +15,7 @@ class NotificationResponse(BaseModel):
     subject: str
     message: str
     status: str
+    is_read: bool = False
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

@@ -37,3 +37,26 @@ def get_my_notifications(
 ):
     """List all notifications sent to the currently authenticated user."""
     return crud.get_user_notifications(db, user_id=current_user.id, skip=skip, limit=limit)
+
+@router.get("/me/unread-count")
+def get_my_unread_count(
+    db: Session = Depends(get_db),
+    current_user: auth.CurrentUser = Depends(auth.get_current_user)
+):
+    """Get the number of unread notifications for the current user."""
+    count = crud.get_unread_count(db, user_id=current_user.id)
+    return {"count": count}
+
+@router.put("/{notification_id}/read", response_model=schema.NotificationResponse)
+def mark_notification_as_read(
+    notification_id: int,
+    db: Session = Depends(get_db),
+    current_user: auth.CurrentUser = Depends(auth.get_current_user)
+):
+    """Mark a notification as read."""
+    notification = crud.get_notification(db, notification_id=notification_id)
+    if notification is None:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    if notification.user_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    return crud.mark_as_read(db, notification_id=notification_id)

@@ -41,3 +41,6 @@ class TokenResponse(BaseModel):
     token_type: str
     token: str
     data: UserData
+
+class RoleUpdateRequest(BaseModel):
+    requested_role: str = Field(..., examples=["organizer"])

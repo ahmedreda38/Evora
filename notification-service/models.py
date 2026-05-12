@@ -1,5 +1,5 @@
 from datetime import datetime, UTC
-from sqlalchemy import Column, Integer, String, DateTime, Text
+from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean
 from database import Base
 
 class Notification(Base):
@@ -11,5 +11,6 @@ class Notification(Base):
     subject = Column(String(255), nullable=False)
     message = Column(Text, nullable=False)
     status = Column(String(50), nullable=False, default="sent") # sent, failed, pending
+    is_read = Column(Boolean, nullable=False, default=False)
     
     created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC))
