@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from pathlib import Path
 from sqlalchemy.orm import Session
 from database import get_db
 import crud, schema
@@ -78,3 +79,47 @@ def delete_existing_event(
         
     crud.delete_event(db=db, event_id=event_id)
     return None
+
+
+@router.post("/{event_id}/image", response_model=schema.EventResponse)
+def upload_event_image(
+    event_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: auth.CurrentUser = Depends(auth.get_current_user)
+):
+    """Upload a background image for an event. Only the organizer can upload."""
+    db_event = crud.get_event_by_id(db, event_id=event_id)
+    if db_event is None:
+        raise HTTPException(status_code=404, detail="Event not found")
+    if db_event.organizer_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    # Validate file type
+    allowed = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+    if file.content_type not in allowed:
+        raise HTTPException(status_code=400, detail=f"Invalid file type. Allowed: {', '.join(allowed)}")
+
+    # Validate file size (max 2MB)
+    contents = file.file.read()
+    if len(contents) > 2 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large. Max 2MB.")
+    file.file.seek(0)
+
+    # Save file
+    import uuid
+    ext = file.filename.rsplit(".", 1)[-1] if "." in file.filename else "jpg"
+    filename = f"event_{event_id}_{uuid.uuid4().hex[:8]}.{ext}"
+    upload_dir = Path("/app/uploads/events")
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    filepath = upload_dir / filename
+
+    with open(filepath, "wb") as f:
+        f.write(contents)
+
+    # Update event with image URL
+    image_url = f"/uploads/events/{filename}"
+    db_event.image_url = image_url
+    db.commit()
+    db.refresh(db_event)
+    return db_event

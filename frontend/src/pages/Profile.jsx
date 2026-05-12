@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
-import { User, Mail, Calendar, Shield, Award, Ticket, DollarSign, Clock, Save, Sparkles, CheckCircle } from 'lucide-react';
+import { User, Mail, Calendar, Shield, Award, Ticket, DollarSign, Clock, Save, Sparkles, CheckCircle, Camera } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import StatCard from '../components/StatCard';
@@ -13,6 +13,23 @@ export default function Profile() {
   const [formData, setFormData] = useState({ username: '', email: '', password: '' });
   const [saving, setSaving] = useState(false);
   const [upgrading, setUpgrading] = useState(false);
+  const avatarInputRef = useRef(null);
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { toast.error('Image must be under 2MB'); return; }
+    if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) { toast.error('Only JPEG, PNG, WebP, GIF allowed'); return; }
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      await axios.post('/users/me/image', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      if (updateUser) await updateUser();
+      toast.success('Profile picture updated!');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Upload failed');
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -79,8 +96,18 @@ export default function Profile() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-gradient-to-r from-primary to-[#005a63] rounded-3xl p-8 md:p-12 mb-8 text-white relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-secondary/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6 relative z-10">
-            <div className="w-20 h-20 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-3xl font-black uppercase border border-white/30 shadow-lg">
-              {user?.username?.charAt(0)}
+            <div className="relative group cursor-pointer" onClick={() => avatarInputRef.current?.click()}>
+              <input type="file" ref={avatarInputRef} className="hidden" accept="image/jpeg,image/png,image/webp,image/gif" onChange={handleAvatarUpload} />
+              {user?.profile_image_url ? (
+                <img src={user.profile_image_url} alt="Profile" className="w-20 h-20 rounded-2xl object-cover border-2 border-white/30 shadow-lg" />
+              ) : (
+                <div className="w-20 h-20 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-3xl font-black uppercase border border-white/30 shadow-lg">
+                  {user?.username?.charAt(0)}
+                </div>
+              )}
+              <div className="absolute inset-0 bg-black/40 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <Camera className="w-6 h-6 text-white" />
+              </div>
             </div>
             <div className="flex-1">
               <h1 className="text-3xl font-extrabold mb-1">{user?.username}</h1>

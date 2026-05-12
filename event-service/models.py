@@ -20,6 +20,7 @@ class Event(Base):
     
     organizer_id = Column(Integer, nullable=False, index=True) # Linked to User ID
     is_published = Column(Boolean, nullable=False, default=False, index=True)
+    image_url = Column(String(500), nullable=True)  # Path to uploaded background image
     
     created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC))
     updated_at = Column(

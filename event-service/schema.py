@@ -36,10 +36,12 @@ class EventUpdate(BaseModel):
     capacity: Optional[int] = Field(None, ge=1)
     price: Optional[float] = Field(None, ge=0.0)
     is_published: Optional[bool] = None
+    image_url: Optional[str] = None
 
 class EventResponse(EventBase):
     id: int
     organizer_id: int
+    image_url: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

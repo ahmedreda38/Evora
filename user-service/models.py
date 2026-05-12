@@ -11,6 +11,7 @@ class User(Base):
     password_hash: str = Column(String, nullable=False)
     role: str = Column(String(50), nullable=False, default="user")
     is_active: bool = Column(Boolean, default=True)
+    profile_image_url: str = Column(String(500), nullable=True)
     date_joined: datetime = Column(DateTime, default=lambda: datetime.now(UTC))
     updated_at : datetime = Column(
         DateTime,

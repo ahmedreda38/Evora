@@ -26,6 +26,7 @@ class UserResponse(UserBase):
     model_config = ConfigDict(from_attributes=True)
     id: int
     is_active: bool
+    profile_image_url: Optional[str] = None
     date_joined: datetime
 
 
@@ -33,8 +34,11 @@ class UserData(UserBase):
     id: int
     role: str
     is_active: bool
+    profile_image_url: Optional[str] = None
     date_joined: datetime
     updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 class TokenResponse(BaseModel):
     access_token: str

@@ -10,10 +10,19 @@ export default function CreateEvent() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
-  const handleCreate = async (payload) => {
+  const handleCreate = async (payload, imageFile) => {
     setLoading(true);
     try {
-      await axios.post('/events/', payload);
+      const res = await axios.post('/events/', payload);
+      const eventId = res.data.id;
+      // Upload image if selected
+      if (imageFile) {
+        const formData = new FormData();
+        formData.append('file', imageFile);
+        await axios.post(`/events/${eventId}/image`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      }
       toast.success('Event created successfully! 🎉');
       navigate('/organizer');
     } catch (err) {

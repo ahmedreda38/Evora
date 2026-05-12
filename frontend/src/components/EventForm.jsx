@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Calendar, MapPin, Users, DollarSign, Type, AlignLeft, Globe, Tag, Eye } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Calendar, MapPin, Users, DollarSign, Type, AlignLeft, Globe, Tag, Eye, ImagePlus, X } from 'lucide-react';
 
 const CATEGORIES = ['Conference','Technology','Workshop','Healthcare','Design','Music','Sports','Business','Education','Networking'];
 
@@ -18,6 +18,31 @@ export default function EventForm({ initialData = {}, onSubmit, submitLabel = 'C
   });
 
   const [errors, setErrors] = useState({});
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(initialData.image_url || null);
+  const fileInputRef = useRef(null);
+
+  const handleImageSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      setErrors(prev => ({ ...prev, image: 'Image must be under 2MB' }));
+      return;
+    }
+    if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
+      setErrors(prev => ({ ...prev, image: 'Only JPEG, PNG, WebP, GIF allowed' }));
+      return;
+    }
+    setErrors(prev => { const { image, ...rest } = prev; return rest; });
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const validate = () => {
     const e = {};
@@ -42,11 +67,10 @@ export default function EventForm({ initialData = {}, onSubmit, submitLabel = 'C
       capacity: parseInt(form.capacity),
       price: parseFloat(form.price),
     };
-    onSubmit(payload);
+    onSubmit(payload, imageFile);
   };
 
   const update = (key, value) => setForm(f => ({ ...f, [key]: value }));
-
   const inputClass = (field) => `w-full px-4 py-3 rounded-xl border ${errors[field] ? 'border-red-300 bg-red-50/50' : 'border-gray-200'} focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-colors`;
 
   return (
@@ -77,6 +101,29 @@ export default function EventForm({ initialData = {}, onSubmit, submitLabel = 'C
             <p className="text-xs text-gray-400 mt-1">{form.description.length}/1000</p>
           </div>
         </div>
+      </section>
+
+      {/* Background Image Upload */}
+      <section>
+        <h3 className="text-lg font-bold text-primary mb-4 flex items-center"><ImagePlus className="w-5 h-5 mr-2" /> Background Image</h3>
+        <input type="file" ref={fileInputRef} accept="image/jpeg,image/png,image/webp,image/gif" onChange={handleImageSelect} className="hidden" />
+        {imagePreview ? (
+          <div className="relative rounded-2xl overflow-hidden border border-gray-200 group">
+            <img src={imagePreview} alt="Event preview" className="w-full h-48 object-cover" />
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+              <button type="button" onClick={() => fileInputRef.current?.click()} className="bg-white text-primary px-4 py-2 rounded-xl font-semibold text-sm hover:bg-gray-100 transition-colors">Change</button>
+              <button type="button" onClick={removeImage} className="bg-red-500 text-white p-2 rounded-xl hover:bg-red-600 transition-colors"><X className="w-4 h-4" /></button>
+            </div>
+          </div>
+        ) : (
+          <button type="button" onClick={() => fileInputRef.current?.click()}
+            className="w-full border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center hover:border-primary hover:bg-primary/5 transition-colors group cursor-pointer">
+            <ImagePlus className="w-10 h-10 mx-auto mb-3 text-gray-300 group-hover:text-primary transition-colors" />
+            <p className="text-sm font-medium text-gray-500 group-hover:text-primary">Click to upload a background image</p>
+            <p className="text-xs text-gray-400 mt-1">JPEG, PNG, WebP, GIF • Max 2MB</p>
+          </button>
+        )}
+        {errors.image && <p className="text-red-500 text-xs mt-2">{errors.image}</p>}
       </section>
 
       {/* Location */}

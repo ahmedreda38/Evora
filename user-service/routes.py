@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, UploadFile, File
+from pathlib import Path
 from sqlalchemy.orm import Session
 from database import get_db
 from models import User
@@ -85,3 +86,37 @@ def get_admin_data(current_user: User = Depends(auth.RoleChecker(["admin"]))):
 def ayhaga(request: Request):
     return request.headers
 
+
+@router.post("/me/image", response_model=UserData)
+def upload_profile_image(
+    file: UploadFile = File(...),
+    current_user: User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Upload a profile image for the authenticated user."""
+    # Validate file type
+    allowed = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+    if file.content_type not in allowed:
+        raise HTTPException(status_code=400, detail=f"Invalid file type. Allowed: {', '.join(allowed)}")
+
+    # Validate file size (max 2MB)
+    contents = file.file.read()
+    if len(contents) > 2 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large. Max 2MB.")
+
+    # Save file
+    import uuid
+    ext = file.filename.rsplit(".", 1)[-1] if "." in file.filename else "jpg"
+    filename = f"user_{current_user.id}_{uuid.uuid4().hex[:8]}.{ext}"
+    upload_dir = Path("/app/uploads/profiles")
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    filepath = upload_dir / filename
+
+    with open(filepath, "wb") as f:
+        f.write(contents)
+
+    # Update user profile_image_url
+    current_user.profile_image_url = f"/uploads/profiles/{filename}"
+    db.commit()
+    db.refresh(current_user)
+    return current_user
