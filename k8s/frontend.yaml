@@ -17,9 +17,10 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: ${REGISTRY:-docker.io/yourusername}/evora-frontend:latest
+          image: evora-frontend:latest
+          imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 80
+            - containerPort: 3000
           resources:
             requests:
               memory: "64Mi"
@@ -30,13 +31,13 @@ spec:
           readinessProbe:
             httpGet:
               path: /
-              port: 80
+              port: 3000
             initialDelaySeconds: 5
             periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /
-              port: 80
+              port: 3000
             initialDelaySeconds: 10
             periodSeconds: 20
 ---
@@ -50,4 +51,4 @@ spec:
     app: frontend
   ports:
     - port: 80
-      targetPort: 80
+      targetPort: 3000

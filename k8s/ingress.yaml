@@ -52,7 +52,7 @@ spec:
                 port:
                   number: 8000
           # Frontend (catch-all, must be last)
-          - path: /(.*)
+          - path: /()(.*)
             pathType: ImplementationSpecific
             backend:
               service:
