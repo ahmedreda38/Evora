@@ -17,6 +17,7 @@ services:
       - event-service
       - event-registration-service
       - notification-service
+      - frontend
 
   postgres-db:
     image: postgres:18
@@ -89,6 +90,16 @@ services:
       - evora-net
     volumes:
       - ./notification-service:/app
+
+  frontend:
+    build: ./frontend
+    container_name: evora-frontend
+    ports:
+      - "3000:3000"
+    networks:
+      - evora-net
+    volumes:
+      - ./frontend:/app
 
 volumes:
   pgdata:
