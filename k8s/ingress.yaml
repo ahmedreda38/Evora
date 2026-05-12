@@ -1,0 +1,61 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: evora-ingress
+  namespace: evora
+  annotations:
+    # Nginx Ingress Controller annotations
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/proxy-body-size: "5m"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/enable-gzip: "true"
+    # Uncomment for cert-manager auto TLS
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - evora.com
+      secretName: evora-tls
+  rules:
+    - host: evora.com
+      http:
+        paths:
+          # Backend API services (strip prefix)
+          - path: /users(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: user-service
+                port:
+                  number: 8000
+          - path: /events(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: event-service
+                port:
+                  number: 8000
+          - path: /register(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: registration-service
+                port:
+                  number: 8000
+          - path: /notifications(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: notification-service
+                port:
+                  number: 8000
+          # Frontend (catch-all, must be last)
+          - path: /(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80

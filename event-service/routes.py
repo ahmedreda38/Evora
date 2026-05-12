@@ -117,8 +117,8 @@ def upload_event_image(
     with open(filepath, "wb") as f:
         f.write(contents)
 
-    # Update event with image URL
-    image_url = f"/uploads/events/{filename}"
+    # Update event with image URL (includes /events prefix for nginx routing)
+    image_url = f"/events/static/uploads/events/{filename}"
     db_event.image_url = image_url
     db.commit()
     db.refresh(db_event)

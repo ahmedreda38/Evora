@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from routes import router as event_router
 
-app = FastAPI(title="Event Service", description="A microservice for managing events", version="1.0.0", root_path="/events")
+app = FastAPI(title="Event Service", description="A microservice for managing events", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -14,9 +14,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount uploads directory for serving uploaded event images
+# Mount uploads BEFORE router so /static/* isn't caught by /{event_id}
 uploads_dir = Path("/app/uploads/events")
 uploads_dir.mkdir(parents=True, exist_ok=True)
-app.mount("/uploads/events", StaticFiles(directory=str(uploads_dir)), name="event-uploads")
+app.mount("/static/uploads/events", StaticFiles(directory=str(uploads_dir)), name="event-uploads")
 
 app.include_router(event_router, tags=["events"])

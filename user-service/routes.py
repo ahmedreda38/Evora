@@ -115,8 +115,8 @@ def upload_profile_image(
     with open(filepath, "wb") as f:
         f.write(contents)
 
-    # Update user profile_image_url
-    current_user.profile_image_url = f"/uploads/profiles/{filename}"
+    # Update user profile_image_url (includes /users prefix for nginx routing)
+    current_user.profile_image_url = f"/users/static/uploads/profiles/{filename}"
     db.commit()
     db.refresh(current_user)
     return current_user

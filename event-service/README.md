@@ -1,19 +1,20 @@
-# Event Service - API Documentation
+# Event Service — API Documentation
 
 ## Overview
 
-The Event Service handles the creation, categorization, searching, and updating of events within the Evora platform. It relies on JWT tokens issued by the User Service to identify the event organizer statelessly.
+The Event Service handles creation, categorization, searching, and management of events within the Evora platform. It supports background image uploads and relies on JWT tokens issued by the User Service for stateless authentication and authorization.
 
 ---
 
 ## Features
 
 - Complete CRUD lifecycle for events
-- Pydantic data validation (e.g., ensuring `end_date` occurs after `start_date`)
-- Advanced search filters (by category, location, price, and organizer)
-- Stateless JWT authentication and authorization
-- Ownership security (only the organizer or admin can modify/delete an event)
-- Draft/Publish workflows (`is_published` toggles public visibility)
+- Background image upload per event (`POST /{event_id}/image`)
+- Advanced search filters (by category, location, price, organizer)
+- Pydantic validation (e.g., `end_date` must be after `start_date`)
+- Draft/Publish workflow (`is_published` toggles public visibility)
+- Ownership security (only the organizer or admin can modify/delete)
+- Static file serving for uploaded images
 
 ---
 
@@ -24,7 +25,7 @@ DATABASE_URL=postgresql+psycopg2://db_admin:evora123@postgres-db:5432/evoradb
 SECRET_KEY=your_secret_key_here_change_in_production
 ```
 
-**CRITICAL**: The `SECRET_KEY` in this service must perfectly match the `SECRET_KEY` in the User Service to decode JWTs successfully.
+> **Critical**: `SECRET_KEY` must match the User Service for JWT verification.
 
 ---
 
@@ -45,6 +46,7 @@ CREATE TABLE events (
   price FLOAT NOT NULL DEFAULT 0.0,
   organizer_id INTEGER NOT NULL,
   is_published BOOLEAN NOT NULL DEFAULT FALSE,
+  image_url VARCHAR(500),
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -52,174 +54,80 @@ CREATE TABLE events (
 
 ---
 
-## Database Migrations (Alembic)
-
-This service uses **Alembic** isolated via the `event_alembic_version` table so it does not conflict with the User Service.
-
-1. **Generate the migration script** (inspects `models.py` and creates a new file in `alembic/versions/`):
-```bash
-docker exec -w /app evora-event-service alembic revision --autogenerate -m "describe your changes here"
-```
-
-2. **Apply the migration** to the database:
-```bash
-docker exec -w /app evora-event-service alembic upgrade head
-```
-
----
-
 ## API Endpoints
 
-### 1. Create Event
-Creates a new event. Requires a valid JWT token. The `organizer_id` is automatically extracted from the token.
+### Event CRUD
 
-**Request:**
-```http
-POST /events/
-Authorization: Bearer <jwt_token>
-Content-Type: application/json
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/` | Bearer | Create event (organizer_id from JWT) |
+| `GET` | `/` | — | List all published events |
+| `GET` | `/{event_id}` | — | Get event details |
+| `PUT` | `/{event_id}` | Bearer | Update event (owner/admin only) |
+| `DELETE` | `/{event_id}` | Bearer | Delete event (owner/admin only) |
 
-{
-  "name": "Evora Annual Tech Fest 2026",
-  "category": "Conference",
-  "description": "A massive 3-day tech conference covering AI and Cloud Computing.",
-  "location": "Cairo International Convention Centre",
-  "is_online": false,
-  "start_date": "2026-10-15T09:00:00Z",
-  "end_date": "2026-10-18T18:00:00Z",
-  "capacity": 500,
-  "price": 150.5,
-  "is_published": true
-}
-```
+### Search
 
-**Response (201):**
-Returns the created event object including its generated `id` and `organizer_id`.
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/search/category/{category}` | Filter by category |
+| `GET` | `/search/location/{location}` | Filter by exact location |
+| `GET` | `/search/price/{price}` | Filter by price |
+| `GET` | `/search/organizer/{organizer_id}` | Filter by organizer |
 
-**Error (422 Unprocessable Entity):**
-Triggered if `start_date` is in the past, or if `end_date` is before `start_date`.
+### Image Upload
 
----
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/{event_id}/image` | Bearer | Upload background image (owner/admin only) |
 
-### 2. List All Published Events
-Retrieves a list of all events where `is_published` is `true`.
-
-**Request:**
-```http
-GET /events/?skip=0&limit=100
-```
-
----
-
-### 3. Search Endpoints
-Allows filtering events by specific criteria.
-
-**By Category:**
-```http
-GET /events/search/category/Conference
-```
-
-**By Location:**
-```http
-GET /events/search/location/Cairo
-```
-
-**By Price:**
-```http
-GET /events/search/price/0.0
-```
-
-**By Organizer ID:**
-```http
-GET /events/search/organizer/1
-```
-
----
-
-### 4. Get Event Details
-Retrieves a specific event by its ID.
-
-**Request:**
-```http
-GET /events/1
-```
-
-**Response (200):**
-Returns the event object.
-
-**Error (404 Not Found):**
-If the event ID does not exist.
-
----
-
-### 5. Update Event
-Modifies an existing event. Only the original `organizer` or an `admin` can perform this action.
-
-**Request:**
-```http
-PUT /events/1
-Authorization: Bearer <jwt_token>
-Content-Type: application/json
-
-{
-  "price": 100.0,
-  "capacity": 600
-}
-```
-
----
-
-### 6. Delete Event
-Deletes an event from the database. Only the original `organizer` or an `admin` can perform this action.
-
-**Request:**
-```http
-DELETE /events/1
-Authorization: Bearer <jwt_token>
-```
+**Image Upload Details:**
+- Content-Type: `multipart/form-data`
+- Field: `file`
+- Allowed types: JPEG, PNG, WebP, GIF
+- Max size: 2 MB
+- Served at: `/events/static/uploads/events/{filename}` (through Nginx)
 
 ---
 
 ## Authentication & Authorization
 
-The Event Service relies on **Stateless JWT Authentication**. 
+The Event Service uses **Stateless JWT Authentication**:
 
-1. It does not connect to the `users` database table.
-2. It verifies the signature of the `Authorization: Bearer` token using its own copy of `SECRET_KEY`.
-3. If the signature is mathematically valid, it trusts the `id`, `username`, and `role` claims encoded in the payload.
+1. It does **not** query the `users` table
+2. It verifies JWT signature using its own `SECRET_KEY`
+3. If valid, it trusts the `id`, `username`, and `role` claims in the payload
+4. Write operations require ownership (`organizer_id == jwt.id`) or `admin` role
 
 ---
 
-## Running the Event Service
+## Database Migrations
 
-### With Docker Compose
 ```bash
-# From project root
-docker compose up -d postgres-db event-service
+# Generate migration after model changes
+docker exec -w /app evora-event-service alembic revision --autogenerate -m "describe changes"
 
-# View logs
-docker compose logs -f event-service
-
-# Stop service
-docker compose stop event-service
+# Apply migrations
+docker exec -w /app evora-event-service alembic upgrade head
 ```
 
-### Local Development
+Uses isolated `event_alembic_version` table to avoid conflicts with other services.
+
+---
+
+## Testing
+
+The event service has **20 automated tests** covering:
+
+- Create event (success, unauthorized, validation)
+- List events (all, empty DB)
+- Get event (success, not found)
+- Search (by category, location, price, organizer)
+- Update event (owner, non-owner, admin override)
+- Delete event (owner, non-owner, nonexistent)
+
 ```bash
-# From project root
-source envy/bin/activate
-
-# Ensure PostgreSQL is running
-docker compose up -d postgres-db
-
-# Initialize database (first time only)
-cd event-service
-alembic upgrade head
-cd ..
-
-# Start service with hot-reload
-cd event-service
-python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
+docker compose -f docker-compose.test.yml up --build event-service-test
 ```
 
 ---
@@ -228,19 +136,22 @@ python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 ```
 event-service/
-├── main.py              # FastAPI application & CORS setup
-├── models.py            # SQLAlchemy Event model
-├── schema.py            # Pydantic validation schemas (with rich examples)
-├── database.py          # Database connection and session
-├── routes.py            # API endpoints
-├── crud.py              # Database CRUD operations and filters
-├── auth.py              # Stateless JWT signature verification
+├── main.py              # FastAPI app + StaticFiles mount for uploads
+├── models.py            # SQLAlchemy Event model (with image_url)
+├── schema.py            # Pydantic schemas (EventCreate, EventUpdate, EventResponse)
+├── database.py          # DB connection and session
+├── routes.py            # API endpoints + image upload handler
+├── crud.py              # Database CRUD operations and search filters
+├── auth.py              # Stateless JWT verification
 ├── requirements.txt     # Python dependencies
-├── alembic/             # Database migration configurations
 ├── Dockerfile           # Docker configuration
+├── alembic/             # Database migration scripts
+├── tests/               # Pytest test suite
+│   ├── conftest.py      # Shared fixtures (DB, client, JWT minting)
+│   └── test_events.py   # 20 test cases
 └── README.md            # This file
 ```
 
 ---
 
-**Last Updated**: May 11, 2026
+**Last Updated**: May 12, 2026

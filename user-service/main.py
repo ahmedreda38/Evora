@@ -5,7 +5,7 @@ from pathlib import Path
 from routes import router as user_router
 
 
-app = FastAPI(title="User Service", description="A microservice for managing users", version="1.0.0", root_path="/users")
+app = FastAPI(title="User Service", description="A microservice for managing users", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -15,9 +15,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount uploads directory for serving profile images
+# Mount uploads BEFORE router to avoid route conflicts
 uploads_dir = Path("/app/uploads/profiles")
 uploads_dir.mkdir(parents=True, exist_ok=True)
-app.mount("/uploads/profiles", StaticFiles(directory=str(uploads_dir)), name="profile-uploads")
+app.mount("/static/uploads/profiles", StaticFiles(directory=str(uploads_dir)), name="profile-uploads")
 
 app.include_router(user_router, tags=["users"])

@@ -1,35 +1,55 @@
-# Evora Cloud Project - Microservices Architecture
+# Evora — Cloud-Native Event Management Platform
 
 ## Project Overview
 
-Evora is a microservices-based event management platform built with **FastAPI**, **PostgreSQL**, and **Docker**. The system handles user management, event management, event registrations, and notifications through independent, scalable microservices routed through an **Nginx API Gateway**.
+Evora is a **microservices-based event management platform** built with **FastAPI**, **React**, **PostgreSQL**, and **Docker**. It provides a full-stack solution for discovering, organizing, and registering for events — complete with user authentication, role-based access, image uploads, notifications, and a production-grade deployment pipeline.
 
-### Architecture Overview
+### Architecture Diagram
 
 ```mermaid
 graph TD
-    Client([Client / Browser]) -->|HTTP/HTTPS| Nginx[Nginx API Gateway]
-    
-    subgraph Microservices Layer
-        Nginx -->|/users| UserSvc[User Service]
-        Nginx -->|/events| EventSvc[Event Service]
-        Nginx -->|/register| RegSvc[Registration Service]
-        Nginx -->|/notifications| NotifSvc[Notification Service]
+    Client([Browser / Mobile]) -->|HTTPS| Nginx[Nginx API Gateway :443]
+
+    subgraph Frontend
+        Nginx -->|/| Vite[React + Vite SPA]
     end
-    
-    subgraph Database Layer
-        UserSvc -.->|SQL| DB[(PostgreSQL evoradb)]
+
+    subgraph Backend Microservices
+        Nginx -->|/users/| UserSvc[User Service]
+        Nginx -->|/events/| EventSvc[Event Service]
+        Nginx -->|/register/| RegSvc[Registration Service]
+        Nginx -->|/notifications/| NotifSvc[Notification Service]
+    end
+
+    subgraph Data Layer
+        UserSvc -.->|SQL| DB[(PostgreSQL 18)]
         EventSvc -.->|SQL| DB
         RegSvc -.->|SQL| DB
         NotifSvc -.->|SQL| DB
     end
-    
-    RegSvc -->|Verify Capacity| EventSvc
-    RegSvc -->|Trigger Email| NotifSvc
-    UserSvc -.->|JWT Auth| EventSvc
-    UserSvc -.->|JWT Auth| RegSvc
-    UserSvc -.->|JWT Auth| NotifSvc
+
+    subgraph Storage
+        UserSvc -.->|File I/O| Uploads[/uploads/]
+        EventSvc -.->|File I/O| Uploads
+    end
+
+    RegSvc -->|HTTP| EventSvc
+    RegSvc -->|HTTP| NotifSvc
 ```
+
+---
+
+## Technology Stack
+
+| Layer | Technology |
+|-------|-----------|
+| **Frontend** | React 18, Vite 5, TailwindCSS, Framer Motion, Lucide Icons |
+| **Backend** | FastAPI (Python 3.13+), Uvicorn, Pydantic v2 |
+| **Database** | PostgreSQL 18, SQLAlchemy 2.0 ORM, Alembic Migrations |
+| **Auth** | JWT (PyJWT HS256), Stateless cross-service verification |
+| **API Gateway** | Nginx (SSL/TLS, Gzip, Reverse Proxy) |
+| **Containerization** | Docker, Docker Compose (Dev / Test / Prod) |
+| **Testing** | Pytest, HTTPX (async test client) |
 
 ---
 
@@ -37,210 +57,127 @@ graph TD
 
 ```
 cloud-project/
-├── docker-compose.dev.yml      # Orchestration for local development
-├── docker-compose.test.yml     # Orchestration for running automated tests
-├── docker-compose.prod.yml     # Orchestration for production deployment
-├── envy/                        # Python virtual environment
-├── user-service/               # User management microservice (Complete)
-├── event-service/              # Event management microservice (Complete)
-├── event-registration-service/ # Event registration handling (Complete)
-├── notification-service/       # Notifications service (Complete)
-├── nginx/                      # Nginx API Gateway (Complete)
-└── docs/                       # Software Architecture Documentation
+├── docker-compose.dev.yml          # Development (hot-reload, exposed ports)
+├── docker-compose.test.yml         # Automated test suite (51 tests)
+├── docker-compose.prod.yml         # Production (optimized, no exposed ports)
+├── nginx/                          # API Gateway config + SSL certs
+│   ├── nginx.conf
+│   └── ssl/
+├── frontend/                       # React SPA (Vite)
+│   ├── Dockerfile                  # Dev image (node:20-alpine)
+│   ├── Dockerfile.prod             # Multi-stage prod (build → nginx:alpine)
+│   └── src/
+│       ├── pages/                  # Landing, Discover, Profile, Organizer, etc.
+│       └── components/             # EventCard, EventForm, Navbar, etc.
+├── user-service/                   # User management & authentication
+├── event-service/                  # Event CRUD & search
+├── event-registration-service/     # Ticket booking & capacity management
+├── notification-service/           # In-app notifications & email logging
+├── docs/                           # Architecture diagrams & DB schemas
+└── k8s/                            # Kubernetes deployment manifests
 ```
-
----
-
-## Technology Stack
-
-| Component | Technology |
-|-----------|-----------|
-| Framework | FastAPI |
-| Server | Uvicorn |
-| Database | PostgreSQL 18 |
-| ORM | SQLAlchemy |
-| Auth | JWT (PyJWT) |
-| Password Hashing | Passlib + pbkdf2_sha256 |
-| Containerization | Docker & Docker Compose |
-| Python Version | 3.13 / 3.14 |
 
 ---
 
 ## Quick Start
 
 ### Prerequisites
-- Docker & Docker Compose installed
-- Python 3.13+ (for local development)
+- Docker & Docker Compose v2+
 - Git
+- (Optional) Node.js 20+ for local frontend development
 
-### Option 1: Using Docker Compose (Recommended)
-
+### Development Environment
 ```bash
-# Navigate to project root
-cd /home/kali/studies/cloud-project
+# Clone and navigate
+cd /path/to/cloud-project
 
-# Create .env file
-cat > .env << EOF
-DATABASE_URL=postgresql+psycopg2://db_admin:evora123@postgres-db:5432/evoradb
-SECRET_KEY=your_super_secret_key_here_change_in_production
-EOF
-
-# Start services
-docker compose -f docker-compose.dev.yml up -d postgres-db user-service
-
-# View logs
-docker compose -f docker-compose.dev.yml logs -f user-service
-
-# Access API documentation
-# Open: http://localhost:8000/docs
-```
-
-### Option 2: Local Development
-
-```bash
-# Navigate to project root
-cd /home/kali/studies/cloud-project
-
-# Activate virtual environment
-source envy/bin/activate
-
-# Create .env file
-cat > .env << EOF
-DATABASE_URL=postgresql+psycopg2://db_admin:evora123@localhost:5432/evoradb
-SECRET_KEY=your_super_secret_key_here
-EOF
-
-# Start PostgreSQL only
-docker compose up -d postgres-db
-
-# Install dependencies
-pip install -r user-service/requirements.txt
-
-# Initialize database tables
-cd user-service
-python create_tables.py
-cd ..
-
-# Run user service
-source envy/bin/activate
-cd user-service
-python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
-```
-
----
-
-## Development Environment Setup
-
-### Step 1: Clone & Navigate
-```bash
-cd /home/kali/studies/cloud-project
-```
-
-### Step 2: Create Environment File
-Create a `.env` file in the project root with required environment variables. Each service may have additional variables - check individual service README files.
-
-```env
-DATABASE_URL=postgresql+psycopg2://db_admin:evora123@postgres-db:5432/evoradb
-SECRET_KEY=your_secret_key_here
-```
-
-### Step 3: Setup Virtual Environment
-```bash
-# Activate existing virtual environment
-source envy/bin/activate
-
-# Or create new one if needed
-python -m venv envy
-source envy/bin/activate
-```
-
-### Step 4: Install Service Dependencies
-```bash
-# For user service
-pip install -r user-service/requirements.txt
-
-# For other services (as needed)
-pip install -r event-service/requirements.txt
-```
-
----
-
-## Running Services
-
-### Docker Compose Environments
-
-This project uses three separate Docker Compose files:
-1. **Development (`docker-compose.dev.yml`)**: Includes volume mounts for hot-reloading code without rebuilding images. Database ports are exposed.
-2. **Testing (`docker-compose.test.yml`)**: Uses an isolated database (`evoradb_test`) and overrides commands to run test suites.
-3. **Production (`docker-compose.prod.yml`)**: Optimized for deployment. No volume mounts, no exposed database ports, and includes `restart: always`.
-
-### All Services with Docker Compose (Development)
-```bash
-# Start all services
+# Start everything (7 containers)
 docker compose -f docker-compose.dev.yml up -d
 
-# Stop all services
-docker compose -f docker-compose.dev.yml down
-
-# View logs for specific service
-docker compose -f docker-compose.dev.yml logs -f user-service
-
-# Rebuild services
-docker compose -f docker-compose.dev.yml build --no-cache
+# Access the platform
+# Frontend:   https://evora.com  (add 127.0.0.1 evora.com to /etc/hosts)
+# User API:   http://localhost:8000/docs
+# Event API:  http://localhost:8001/docs
 ```
 
-### Individual Services with Docker Compose
+### Run Automated Tests (51 tests)
 ```bash
-# Start only specific services
-docker compose -f docker-compose.dev.yml up -d postgres-db user-service
-
-# Stop specific service
-docker compose -f docker-compose.dev.yml stop user-service
-
-# Restart service
-docker compose -f docker-compose.dev.yml restart user-service
+docker compose -f docker-compose.test.yml up --build --abort-on-container-exit
 ```
 
-### Local Development Mode
+### Production Deployment
 ```bash
-# Start database only
-docker compose -f docker-compose.dev.yml up -d postgres-db
+# Set environment variables
+export SECRET_KEY=your_production_secret_key
+export POSTGRES_PASSWORD=strong_db_password
 
-# From service directory, run with hot-reload
-cd user-service
-python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
+# Build and launch
+docker compose -f docker-compose.prod.yml up -d --build
+
+# Apply database migrations
+docker exec -w /app evora-user-service-prod alembic upgrade head
+docker exec -w /app evora-event-service-prod alembic upgrade head
+docker exec -w /app evora-event-registration-service-prod alembic upgrade head
+docker exec -w /app evora-notification-service-prod alembic upgrade head
 ```
 
 ---
 
-## Service Documentation
+## Services Overview
 
-Each microservice has its own README with service-specific details:
-
-- **[User Service](./user-service/README.md)** - User management, authentication, JWT
-- **[Event Service](./event-service/README.md)** - Event CRUD operations, Capacity
-- **[Event Registration Service](./event-registration-service/README.md)** - Registration management, Booking
-- **[Notifications Service](./notification-service/README.md)** - Email and System notifications
+| Service | Port (Dev) | Endpoints | Description |
+|---------|-----------|-----------|-------------|
+| **User Service** | 8000 | `/users/` | Registration, login, JWT auth, profile, role management, avatar upload |
+| **Event Service** | 8001 | `/events/` | Event CRUD, search (category/location/price/organizer), background image upload |
+| **Registration Service** | 8002 | `/register/` | Ticket booking, capacity enforcement, booking history |
+| **Notification Service** | 8003 | `/notifications/` | Send/list notifications, unread count, mark-as-read |
+| **Frontend** | 3000 | `/` | React SPA served through Nginx |
+| **Nginx Gateway** | 80/443 | — | SSL termination, reverse proxy, gzip, static file caching |
+| **PostgreSQL** | 5432 | — | Shared database (`evoradb`) with isolated Alembic migrations per service |
 
 ---
 
-## File Structure for Each Microservice
+## Docker Compose Environments
 
-When creating a new microservice, follow this structure:
+| File | Purpose | DB | Ports Exposed |
+|------|---------|----|----|
+| `docker-compose.dev.yml` | Local development with hot-reload | `evoradb` on :5432 | All services + DB |
+| `docker-compose.test.yml` | CI/CD test runner (51 automated tests) | `evoradb_test` on :5433 | Test DB only |
+| `docker-compose.prod.yml` | Production deployment | `evoradb` (internal only) | 80, 443 only |
 
-```
-service-name/
-├── README.md               # Service documentation
-├── main.py               # FastAPI app initialization
-├── models.py             # SQLAlchemy ORM models
-├── schema.py             # Pydantic request/response schemas
-├── database.py           # DB connection & session management
-├── crud.py               # Database CRUD operations
-├── routes.py             # API endpoints
-├── auth.py               # Authentication/Authorization logic
-├── requirements.txt      # Python dependencies
-├── Dockerfile            # Docker container config
-└── create_tables.py      # Database table initialization
+---
+
+## Image Upload System
+
+Both event background images and user profile avatars are supported:
+
+| Feature | Endpoint | Max Size | Formats | Storage Path |
+|---------|----------|----------|---------|-------------|
+| Event Image | `POST /events/{id}/image` | 2 MB | JPEG, PNG, WebP, GIF | `/app/uploads/events/` |
+| Profile Avatar | `POST /users/me/image` | 2 MB | JPEG, PNG, WebP, GIF | `/app/uploads/profiles/` |
+
+Images are served as static files through FastAPI's `StaticFiles` mount and accessible via Nginx at:
+- Event: `https://evora.com/events/static/uploads/events/{filename}`
+- Profile: `https://evora.com/users/static/uploads/profiles/{filename}`
+
+---
+
+## Automated Test Suite
+
+**51 tests** across 3 services, all running against an isolated test database:
+
+| Service | Tests | Coverage |
+|---------|-------|----------|
+| **User Service** | 19 | Registration, login, profile CRUD, role upgrades, duplicates, validation |
+| **Event Service** | 20 | CRUD, search (4 filters), authorization, date validation, ownership |
+| **Notification Service** | 12 | Send, list, unread count, mark-as-read, auth, impersonation guard |
+
+```bash
+# Run all tests
+docker compose -f docker-compose.test.yml up --build --abort-on-container-exit
+
+# Run single service tests
+docker compose -f docker-compose.test.yml up --build user-service-test
 ```
 
 ---
@@ -248,124 +185,97 @@ service-name/
 ## Common Commands
 
 ```bash
-# Docker Compose Commands
-docker compose -f docker-compose.dev.yml up -d                    # Start all services in background
-docker compose -f docker-compose.dev.yml down                     # Stop all services
-docker compose -f docker-compose.dev.yml logs -f [service]        # View service logs
-docker compose -f docker-compose.dev.yml exec [service] bash      # Execute bash in service
-docker compose -f docker-compose.dev.yml build --no-cache         # Rebuild all images
-docker compose -f docker-compose.dev.yml down -v                  # Stop and remove volumes
+# Development
+docker compose -f docker-compose.dev.yml up -d             # Start all
+docker compose -f docker-compose.dev.yml logs -f [service]  # View logs
+docker compose -f docker-compose.dev.yml restart [service]  # Restart
 
-# Database Access
-docker exec -it evora-db psql -U db_admin -d evoradb
+# Database
+docker exec -it evora-db psql -U db_admin -d evoradb       # Connect to DB
+docker exec -w /app evora-event-service alembic upgrade head # Apply migrations
 
-# View running containers
-docker ps
+# Testing
+docker compose -f docker-compose.test.yml up --build --abort-on-container-exit
 
-# View all containers
-docker ps -a
+# Production
+docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml down
 ```
+
+---
+
+## Environment Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `DATABASE_URL` | Yes | — | PostgreSQL connection string |
+| `SECRET_KEY` | Yes | `change_me_in_production` | JWT signing key (must match across services) |
+| `POSTGRES_USER` | Prod | `db_admin` | Database username |
+| `POSTGRES_PASSWORD` | Prod | `evora123` | Database password |
+| `POSTGRES_DB` | Prod | `evoradb` | Database name |
+
+> **Critical**: `SECRET_KEY` must be identical across all backend services for JWT verification to work.
+
+---
+
+## Service Documentation
+
+Each microservice has its own detailed README:
+
+- **[User Service](./user-service/README.md)** — Auth, profiles, roles, avatar uploads
+- **[Event Service](./event-service/README.md)** — CRUD, search, image uploads
+- **[Registration Service](./event-registration-service/README.md)** — Ticketing & capacity
+- **[Notification Service](./notification-service/README.md)** — Alerts & email logging
+
+Architecture details:
+
+- **[Architecture & Sequence Diagrams](./docs/architecture.md)**
+- **[Database ER Diagram](./docs/database.md)**
+- **[Kubernetes Deployment Guide](./docs/kubernetes.md)**
 
 ---
 
 ## Troubleshooting
 
-### Port Already in Use
+### Services not starting
 ```bash
-# Find service using port 8000
-lsof -i :8000
-
-# Kill process
-kill -9 <PID>
+docker compose -f docker-compose.dev.yml logs [service]    # Check logs
+docker ps -a                                                 # Check container status
 ```
 
-### Container Network Issues
+### Database tables missing
 ```bash
-# Ensure containers are on same network
-docker network ls
-docker network inspect evora-net
-
-# Recreate network
-docker compose -f docker-compose.dev.yml down -v
-docker compose -f docker-compose.dev.yml up -d
+docker exec -w /app evora-event-service alembic upgrade head
+docker exec -w /app evora-user-service alembic upgrade head
 ```
 
-### Database Connection Issues
-# Ensure PostgreSQL container is running: `docker compose -f docker-compose.dev.yml ps`
-- Check DATABASE_URL in .env file
-- Verify credentials match docker-compose.yml
+### Image uploads returning 404
+- Ensure nginx was reloaded: `docker exec evora-nginx nginx -s reload`
+- Verify file exists: `docker exec evora-event-service ls /app/uploads/events/`
 
----
-
-## Development Guidelines
-
-### Before Pushing Code
-- [ ] All services have Dockerfile
-- [ ] All services have requirements.txt
-- [ ] Environment variables documented in service README
-- [ ] Code tested locally
-- [ ] No hardcoded secrets in code
-
-### Code Review Checklist
-- [ ] Code follows project structure
-- [ ] Environment variables properly configured
-- [ ] API endpoints documented
-- [ ] Dependencies added to requirements.txt
-- [ ] No breaking changes to existing APIs
-
-### Git Workflow
+### Port conflicts
 ```bash
-# Feature branch development
-git checkout -b feature/service-name
-
-# Before pushing
-git pull origin develop
-git merge develop
-
-# Create pull request to develop branch
+lsof -i :8000                   # Find what's using the port
+docker compose down              # Stop all containers
 ```
 
 ---
 
 ## Project Roadmap
 
-| Phase | Status | Services |
-|-------|--------|----------|
-| Phase 1 | ✓ Complete | User Service |
-| Phase 2 | ✓ Complete | Event Service |
-| Phase 3 | ✓ Complete | Event Registration Service |
-| Phase 4 | ✓ Complete | Notification Service |
-| Phase 5 | ✓ Complete | Nginx API Gateway |
+| Phase | Status | Deliverable |
+|-------|--------|-------------|
+| Phase 1 | ✅ Complete | User Service (auth, JWT, roles) |
+| Phase 2 | ✅ Complete | Event Service (CRUD, search, images) |
+| Phase 3 | ✅ Complete | Registration Service (ticketing, capacity) |
+| Phase 4 | ✅ Complete | Notification Service (alerts, email) |
+| Phase 5 | ✅ Complete | Nginx Gateway (SSL, gzip, proxy) |
+| Phase 6 | ✅ Complete | React Frontend (SPA, 10+ pages) |
+| Phase 7 | ✅ Complete | Automated Testing (51 tests) |
+| Phase 8 | ✅ Complete | Production Deployment Pipeline |
+| Phase 9 | ✅ Complete | Image Upload System (events + profiles) |
+| Phase 10 | 📋 Ready | Kubernetes Deployment Manifests |
 
 ---
 
-## Environment Variables
-
-### Required for All Services
-- `DATABASE_URL` - PostgreSQL connection string
-- `SECRET_KEY` - JWT signing key
-
-### Service-Specific Variables
-Refer to individual service README files for service-specific environment variables.
-
----
-
-## Additional Resources
-
-- [FastAPI Documentation](https://fastapi.tiangolo.com/)
-- [SQLAlchemy ORM](https://docs.sqlalchemy.org/en/20/orm/)
-- [PyJWT](https://pyjwt.readthedocs.io/)
-- [Docker Compose](https://docs.docker.com/compose/)
-- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
-
----
-
-## Support
-
-For issues or questions:
-1. Check the relevant service README
-2. Review common troubleshooting section
-3. Check Docker logs: `docker compose -f docker-compose.dev.yml logs -f [service]`
-4. Contact the team lead
-
-**Last Updated**: May 9, 2026
+**Last Updated**: May 12, 2026
